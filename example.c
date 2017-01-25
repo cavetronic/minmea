@@ -106,6 +106,27 @@ int main(void)
                     printf(INDENT_SPACES "$xxVTG sentence is not parsed\n");
                }
             } break;
+           
+            case MINMEA_SENTENCE_ZDA: {
+               struct minmea_sentence_zda frame;
+               if (minmea_parse_zda(&frame, line)) {
+                    printf(INDENT_SPACES "$xxZDA: UTC time (hh:mm:ss.ss) = %.2d:%.2d:%.2d.%.2d\n",
+                           frame.time_utc.hours,
+                           frame.time_utc.minutes,
+                           frame.time_utc.seconds,
+                           frame.time_utc.microseconds/10000);
+                    printf(INDENT_SPACES "        date (dd.mm.yyyy) = %.2d.%.2d.%.4d\n",
+                           frame.date_utc.day,
+                           frame.date_utc.month,
+                           frame.date_utc.year);
+                    printf(INDENT_SPACES "        local zone offset (hh:mm) = %.2d:%.2d\n",
+                           frame.local_zone_offset.hours,
+                           frame.local_zone_offset.minutes);
+               }
+               else {
+                    printf(INDENT_SPACES "$xxZDA sentence is not parsed\n");
+               }
+            } break;
 
             case MINMEA_INVALID: {
                 printf(INDENT_SPACES "$xxxxx sentence is not valid\n");

@@ -372,6 +372,8 @@ enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict)
         return MINMEA_SENTENCE_GSV;
     if (!strcmp(type+2, "VTG"))
         return MINMEA_SENTENCE_VTG;
+    if (!strcmp(type+2, "ZDA"))
+        return MINMEA_SENTENCE_ZDA;
 
     return MINMEA_UNKNOWN;
 }
@@ -581,6 +583,33 @@ bool minmea_parse_vtg(struct minmea_sentence_vtg *frame, const char *sentence)
         return false;
     frame->faa_mode = c_faa_mode;
 
+    return true;
+}
+
+bool minmea_parse_zda(struct minmea_sentence_zda *frame, const char *sentence)
+{
+	// $GPZDA,hhmmss.ss,dd,mm,yyyy,xx,yy*CC
+	// $GPZDA,201530.00,04,07,2002,00,00*60
+	// where:
+	// 	hhmmss    HrMinSec(UTC)
+	// 	dd,mm,yyy Day,Month,Year
+	//		xx        local zone hours -13..13
+	//		yy        local zone minutes 0..59
+	//		*CC       checksum
+    char type[6];
+
+    if (!minmea_scan(sentence, "tTiiiii",
+            type,
+            &frame->time_utc,
+            &frame->date_utc.day,
+            &frame->date_utc.month,
+            &frame->date_utc.year,
+            &frame->local_zone_offset.hours,
+            &frame->local_zone_offset.minutes))
+        return false;
+    if (strcmp(type+2, "ZDA"))
+        return false;
+        
     return true;
 }
 
