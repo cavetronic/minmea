@@ -39,6 +39,8 @@ static const char *valid_sentences_checksum[] = {
     "$GPRMC,123205.00,A,5106.94085,N,01701.51689,E,0.016,,280214,,,A*7B",
     "$GPVTG,,T,,M,0.016,N,0.030,K,A*27",
     "$GPGST,024603.00,3.2,6.6,4.7,47.3,5.8,5.6,22.0*58",
+    "$GPZDA,201530.00,04,07,2002,00,00*60",
+    "$GPZDA,201530.98,04,07,2002,-10,00*4D",
     NULL,
 };
 
@@ -53,6 +55,7 @@ static const char *invalid_sentences[] = {
     "gps: $GPGLL,,,,,,V,N",
     "$GPXTE,A,A,0.67,L,N*6e",
     "$GPXTE,A,A,0.67,L,N*6g",
+    "$GPZDA,201530.00,04,07,2002,00,00*61",
     NULL,
 };
 
@@ -68,6 +71,7 @@ START_TEST(test_minmea_checksum)
     ck_assert_int_eq(minmea_checksum("GPTXT,01,01,02,ANTSTATUS=INIT"), 0x25);
     ck_assert_int_eq(minmea_checksum("$GPXTE,A,A,0.67,L,N*6F"), 0x6f);
     ck_assert_int_eq(minmea_checksum("GPXTE,A,A,0.67,L,N*6f"), 0x6f);
+    ck_assert_int_eq(minmea_checksum("$GPZDA,201530.00,04,07,2002,00,00*60"), 0x60);
 }
 END_TEST
 
@@ -864,6 +868,46 @@ START_TEST(test_minmea_parse_vtg2)
 }
 END_TEST
 
+START_TEST(test_minmea_parse_zda1)
+{
+    const char *sentence = "$GPZDA,201530.98,04,07,2002,-10,00*4D";
+    // clear structs before initialization to enable use of memcmp()
+    struct minmea_sentence_zda frame = {};
+    struct minmea_sentence_zda expected = {};
+
+    expected = (struct minmea_sentence_zda){
+        .time_utc = { 20, 15, 30, 980000 },
+        .date_utc = { 4, 7, 2002 },
+        .local_zone_offset = { -10, 00 },
+    };
+
+    ck_assert(minmea_check(sentence, false) == true);
+    ck_assert(minmea_check(sentence, true) == true);
+    ck_assert(minmea_parse_zda(&frame, sentence) == true);
+    ck_assert(!memcmp(&frame, &expected, sizeof(frame)));
+}
+END_TEST
+
+START_TEST(test_minmea_parse_zda2)
+{
+    const char *sentence = "$GPZDA,080559,01,07,2016,00,00*4A";
+    // clear structs before initialization to enable use of memcmp()
+    struct minmea_sentence_zda frame = {};
+    struct minmea_sentence_zda expected = {};
+
+    expected = (struct minmea_sentence_zda){
+        .time_utc = { 8, 5, 59, 0 },
+        .date_utc = { 1, 7, 2016 },
+        .local_zone_offset = { 0, 0 },
+    };
+
+    ck_assert(minmea_check(sentence, false) == true);
+    ck_assert(minmea_check(sentence, true) == true);
+    ck_assert(minmea_parse_zda(&frame, sentence) == true);
+    ck_assert(!memcmp(&frame, &expected, sizeof(frame)));
+}
+END_TEST
+
 START_TEST(test_minmea_usage1)
 {
     const char *sentences[] = {
@@ -873,6 +917,7 @@ START_TEST(test_minmea_usage1)
         "$GPGLL,3723.2475,N,12158.3416,W,161229.487,A,A*41",
         "$GPGST,024603.00,3.2,6.6,4.7,47.3,5.8,5.6,22.0*58",
         "$GPVTG,096.5,T,083.5,M,0.0,N,0.0,K,D*22",
+        "$GPZDA,201530.98,04,07,2002,-10,00*4D",
         NULL,
     };
 
@@ -906,6 +951,11 @@ START_TEST(test_minmea_usage1)
             case MINMEA_SENTENCE_VTG: {
                 struct minmea_sentence_vtg frame;
                 ck_assert(minmea_parse_vtg(&frame, *sentence) == true);
+            } break;
+            
+            case MINMEA_SENTENCE_ZDA: {
+                struct minmea_sentence_zda frame;
+                ck_assert(minmea_parse_zda(&frame, *sentence) == true);
             } break;
 
             default: {
@@ -1020,6 +1070,8 @@ static Suite *minmea_suite(void)
     tcase_add_test(tc_parse, test_minmea_parse_gsv5);
     tcase_add_test(tc_parse, test_minmea_parse_vtg1);
     tcase_add_test(tc_parse, test_minmea_parse_vtg2);
+    tcase_add_test(tc_parse, test_minmea_parse_zda1);
+	 tcase_add_test(tc_parse, test_minmea_parse_zda2);
     suite_add_tcase(s, tc_parse);
 
     TCase *tc_usage = tcase_create("minmea_usage");

@@ -32,6 +32,7 @@ enum minmea_sentence_id {
     MINMEA_SENTENCE_GST,
     MINMEA_SENTENCE_GSV,
     MINMEA_SENTENCE_VTG,
+    MINMEA_SENTENCE_ZDA,
 };
 
 struct minmea_float {
@@ -50,6 +51,11 @@ struct minmea_time {
     int minutes;
     int seconds;
     int microseconds;
+};
+
+struct minmea_zone {
+    int hours;
+    int minutes;
 };
 
 struct minmea_sentence_rmc {
@@ -152,6 +158,12 @@ struct minmea_sentence_vtg {
     enum minmea_faa_mode faa_mode;
 };
 
+struct minmea_sentence_zda {
+    struct minmea_time time_utc;
+    struct minmea_date date_utc;
+    struct minmea_zone local_zone_offset;
+};
+
 /**
  * Calculate raw sentence checksum. Does not check sentence integrity.
  */
@@ -180,7 +192,8 @@ enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict);
  * i - decimal, default zero (int *)
  * s - string (char *)
  * t - talker identifier and type (char *)
- * T - date/time stamp (int *, int *, int *)
+ * D - date (int * day, int * month, int * year), -1 if empty
+ * T - time (int * hour, int * minute, int * second), -1 if empty, suport fractional time (two digits)
  * Returns true on success. See library source code for details.
  */
 bool minmea_scan(const char *sentence, const char *format, ...);
@@ -195,6 +208,7 @@ bool minmea_parse_gll(struct minmea_sentence_gll *frame, const char *sentence);
 bool minmea_parse_gst(struct minmea_sentence_gst *frame, const char *sentence);
 bool minmea_parse_gsv(struct minmea_sentence_gsv *frame, const char *sentence);
 bool minmea_parse_vtg(struct minmea_sentence_vtg *frame, const char *sentence);
+bool minmea_parse_zda(struct minmea_sentence_zda *frame, const char *sentence);
 
 /**
  * Convert GPS UTC date/time representation to a UNIX timestamp.
